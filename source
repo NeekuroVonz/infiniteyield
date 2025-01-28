@@ -4360,8 +4360,6 @@ CMDs[#CMDs + 1] = {NAME = 'unkeepiy', DESC = 'Disable keepiy'}
 CMDs[#CMDs + 1] = {NAME = 'togglekeepiy', DESC = 'Toggle keepiy'}
 CMDs[#CMDs + 1] = {NAME = 'savegame / saveplace', DESC = 'Uses saveinstance to save the game'}
 CMDs[#CMDs + 1] = {NAME = 'clearerror', DESC = 'Clears the annoying box and blur when a game kicks you'}
-CMDs[#CMDs + 1] = {NAME = 'clientantikick / antikick (CLIENT)', DESC = 'Prevents localscripts from kicking you'}
-CMDs[#CMDs + 1] = {NAME = 'clientantiteleport / antiteleport (CLIENT)', DESC = 'Prevents localscripts from teleporting you'}
 CMDs[#CMDs + 1] = {NAME = 'allowrejoin / allowrj [true/false] (CLIENT)', DESC = 'Changes if antiteleport allows you to rejoin or not'}
 CMDs[#CMDs + 1] = {NAME = 'cancelteleport / canceltp', DESC = 'Cancels teleports in progress'}
 CMDs[#CMDs + 1] = {NAME = 'volume / vol [0-10]', DESC = 'Adjusts your game volume on a scale of 0 to 10'}
@@ -4599,12 +4597,10 @@ CMDs[#CMDs + 1] = {NAME = 'invisible / invis', DESC = 'Makes you invisible to ot
 CMDs[#CMDs + 1] = {NAME = 'visible / vis', DESC = 'Makes you visible to other players'}
 CMDs[#CMDs + 1] = {NAME = 'toolinvisible / toolinvis / tinvis', DESC = 'Makes you invisible to other players and able to use tools'}
 CMDs[#CMDs + 1] = {NAME = 'speed / ws / walkspeed [num]', DESC = 'Change your walkspeed'}
-CMDs[#CMDs + 1] = {NAME = 'spoofspeed / spoofws [num]', DESC = 'Spoofs your WalkSpeed on the Client'}
 CMDs[#CMDs + 1] = {NAME = 'loopspeed / loopws [num]', DESC = 'Loops your walkspeed'}
 CMDs[#CMDs + 1] = {NAME = 'unloopspeed / unloopws', DESC = 'Turns off loopspeed'}
 CMDs[#CMDs + 1] = {NAME = 'hipheight / hheight [num]', DESC = 'Adjusts hip height'}
 CMDs[#CMDs + 1] = {NAME = 'jumppower / jpower / jp [num]', DESC = 'Change a players jump height'}
-CMDs[#CMDs + 1] = {NAME = 'spoofjumppower / spoofjp [num]', DESC = 'Spoofs your JumpPower on the Client'}
 CMDs[#CMDs + 1] = {NAME = 'loopjumppower / loopjp [num]', DESC = 'Loops your jump height'}
 CMDs[#CMDs + 1] = {NAME = 'unloopjumppower / unloopjp', DESC = 'Turns off loopjumppower'}
 CMDs[#CMDs + 1] = {NAME = 'maxslopeangle / msa [num]', DESC = 'Adjusts MaxSlopeAngle'}
@@ -7700,56 +7696,7 @@ addcmd('clearerror',{'clearerrors'},function(args, speaker)
 	GuiService:ClearError()
 end)
 
-addcmd('clientantikick',{'antikick'},function(args, speaker)
-	if not hookmetamethod then 
-		return notify('Incompatible Exploit','Your exploit does not support this command (missing hookmetamethod)')
-	end
-	local LocalPlayer = Players.LocalPlayer
-	local oldhmmi
-	local oldhmmnc
-	oldhmmi = hookmetamethod(game, "__index", function(self, method)
-		if self == LocalPlayer and method:lower() == "kick" then
-			return error("Expected ':' not '.' calling member function Kick", 2)
-		end
-		return oldhmmi(self, method)
-	end)
-	oldhmmnc = hookmetamethod(game, "__namecall", function(self, ...)
-		if self == LocalPlayer and getnamecallmethod():lower() == "kick" then
-			return
-		end
-		return oldhmmnc(self, ...)
-	end)
-
-	notify('Client Antikick','Client anti kick is now active (only effective on localscript kick)')
-end)
-
 allow_rj = true
-addcmd('clientantiteleport',{'antiteleport'},function(args, speaker)
-	if not hookmetamethod then 
-		return notify('Incompatible Exploit','Your exploit does not support this command (missing hookmetamethod)')
-	end
-	local TeleportService = TeleportService
-	local oldhmmi
-	local oldhmmnc
-	oldhmmi = hookmetamethod(game, "__index", function(self, method)
-		if self == TeleportService then
-			if method:lower() == "teleport" then
-				return error("Expected ':' not '.' calling member function Kick", 2)
-			elseif method == "TeleportToPlaceInstance" then
-				return error("Expected ':' not '.' calling member function TeleportToPlaceInstance", 2)
-			end
-		end
-		return oldhmmi(self, method)
-	end)
-	oldhmmnc = hookmetamethod(game, "__namecall", function(self, ...)
-		if self == TeleportService and getnamecallmethod():lower() == "teleport" or getnamecallmethod() == "TeleportToPlaceInstance" then
-			return
-		end
-		return oldhmmnc(self, ...)
-	end)
-
-	notify('Client AntiTP','Client anti teleport is now active (only effective on localscript teleport)')
-end)
 
 addcmd('allowrejoin',{'allowrj'},function(args, speaker)
 	if args[1] and args[1] == 'false' then
@@ -10012,32 +9959,6 @@ addcmd('speed',{'ws','walkspeed'},function(args, speaker)
 	end
 end)
 
-addcmd('spoofspeed',{'spoofws','spoofwalkspeed'},function(args, speaker)
-	if args[1] and isNumber(args[1]) then
-		if hookmetamethod then
-			local char = speaker.Character
-			local setspeed;
-			local index; index = hookmetamethod(game, "__index", function(self, key)
-				local keyclean = key:gsub("\0", "")
-				if (keyclean == "WalkSpeed" or keyclean == "walkSpeed") and self:IsA("Humanoid") and self:IsDescendantOf(char) and not checkcaller() then
-					return setspeed or args[1]
-				end
-				return index(self, key)
-			end)
-			local newindex; newindex = hookmetamethod(game, "__newindex", function(self, key, value)
-				local keyclean = string.gsub(key, "\0", "")
-				if (keyclean == "WalkSpeed" or keyclean == "walkSpeed") and self:IsA("Humanoid") and self:IsDescendantOf(char) and not checkcaller() then
-					setspeed = tonumber(value)
-					return setspeed
-				end
-				return newindex(self, key, value)
-			end)
-		else
-			notify('Incompatible Exploit','Your exploit does not support this command (missing hookmetamethod)')
-		end
-	end
-end)
-
 addcmd('loopspeed',{'loopws'},function(args, speaker)
 	local speed = args[1] or 16
 	if args[2] then
@@ -10064,32 +9985,6 @@ end)
 addcmd('unloopspeed',{'unloopws'},function(args, speaker)
 	HumanModCons.wsLoop = (HumanModCons.wsLoop and HumanModCons.wsLoop:Disconnect() and false) or nil
 	HumanModCons.wsCA = (HumanModCons.wsCA and HumanModCons.wsCA:Disconnect() and false) or nil
-end)
-
-addcmd('spoofjumppower',{'spoofjp'},function(args, speaker)
-	if args[1] and isNumber(args[1]) then
-		if hookmetamethod then
-			local char = speaker.Character
-			local setpower;
-			local index; index = hookmetamethod(game, "__index", function(self, key)
-				local keyclean = key:gsub("\0", "")
-				if (keyclean == "JumpPower" or keyclean == "jumpPower") and self:IsA("Humanoid") and self:IsDescendantOf(char) and not checkcaller() then
-					return setpower or args[1]
-				end
-				return index(self, key)
-			end)
-			local newindex; newindex = hookmetamethod(game, "__newindex", function(self, key, value)
-				local keyclean = string.gsub(key, "\0", "")
-				if (keyclean == "JumpPower" or keyclean == "jumpPower") and self:IsA("Humanoid") and self:IsDescendantOf(char) and not checkcaller() then
-					setpower = tonumber(value)
-					return setpower
-				end
-				return newindex(self, key, value)
-			end)
-		else
-			notify('Incompatible Exploit','Your exploit does not support this command (missing hookmetamethod)')
-		end
-	end
 end)
 
 addcmd('loopjumppower',{'loopjp','loopjpower'},function(args, speaker)
